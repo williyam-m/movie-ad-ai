@@ -13,7 +13,6 @@ from backend.media import (
     detect_scene_cuts,
     detect_silences,
     extract_frame,
-    parse_sidecar_subtitles,
     probe_duration,
     silence_near,
 )
@@ -94,7 +93,9 @@ class VideoAnalysisPipeline:
         update("Measuring dialogue-safe silence", 0.26)
         silences = detect_silences(source_path, duration, self.settings)
         speech_segments = self.models.transcribe(source_path)
-        used_sidecar = bool(parse_sidecar_subtitles(source_path))
+        used_sidecar = source_path.with_suffix(".srt").is_file() and bool(
+            speech_segments
+        )
 
         update("Building semantic scenes", 0.40)
         scenes = self._build_scenes(
@@ -249,7 +250,7 @@ class VideoAnalysisPipeline:
             midpoint = start + (end - start) / 2
             transcript = _transcript_for_scene(speech_segments, start, end)
             frame_path: Path | None = None
-            if index < self.settings.max_vlm_scenes:
+            if index < self.settings.max_vlm_scenes and self.models.needs_visual_frame:
                 candidate_frame = frame_dir / f"scene-{index + 1:04}.jpg"
                 try:
                     frame_path = extract_frame(
