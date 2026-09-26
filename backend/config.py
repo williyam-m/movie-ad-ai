@@ -18,8 +18,8 @@ def _environment_flag(name: str, default: bool) -> bool:
 @dataclass(frozen=True)
 class Settings:
     root_dir: Path = ROOT_DIR
-    data_dir: Path = Path(os.getenv("CHHONDO_DATA_DIR", ROOT_DIR / "runtime"))
-    max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", 2 * 1024**3))
+    data_dir: Path = Path(os.getenv("MOVIE_AD_AI_DATA_DIR", ROOT_DIR / "runtime"))
+    max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", 400 * 1024**2))
     ffmpeg_binary: str = os.getenv("FFMPEG_BINARY", "ffmpeg")
     ffprobe_binary: str | None = os.getenv("FFPROBE_BINARY") or shutil.which("ffprobe")
     public_base_url: str = os.getenv("PUBLIC_BASE_URL", "http://localhost:7860").rstrip(
