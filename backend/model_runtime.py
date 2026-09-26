@@ -166,6 +166,10 @@ class ModelRuntime:
         if message not in self.notes:
             self.notes.append(message)
 
+    @property
+    def needs_visual_frame(self) -> bool:
+        return self.settings.enable_vlm and not self._vlm_failed
+
     def transcribe(self, video_path: Path) -> list[SpeechSegment]:
         sidecar_segments = parse_sidecar_subtitles(video_path)
         if sidecar_segments:
