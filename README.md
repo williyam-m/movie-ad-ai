@@ -1,5 +1,5 @@
 ---
-title: Chhondo Movie Ad AI
+title: Movie Ad AI
 emoji: 🎬
 colorFrom: red
 colorTo: gray
@@ -8,9 +8,20 @@ app_port: 7860
 pinned: false
 ---
 
-# Chhondo
+# Movie Ad AI
 
-Context-aware scene segmentation and intelligent ad placement for long-form Bengali video. Chhondo finds natural interruption points, applies explicit pacing rules, rejects unsafe brand contexts, emits VMAP 1.0 with inline VAST 4.2, and demonstrates the result in a player that cuts to the ad and resumes the programme.
+![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI 0.141](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white)
+![Pydantic 2](https://img.shields.io/badge/Pydantic-2-E92063?logo=pydantic&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
+![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
+![FFmpeg](https://img.shields.io/badge/FFmpeg-scene%20%2B%20silence-007808?logo=ffmpeg&logoColor=white)
+![SmolVLM2 256M](https://img.shields.io/badge/VLM-SmolVLM2%20256M-FFD21E)
+![faster-whisper tiny](https://img.shields.io/badge/ASR-faster--whisper%20tiny-4B8BBE)
+![MiniLM L12](https://img.shields.io/badge/Embeddings-MiniLM%20L12-FF6F00)
+![Docker](https://img.shields.io/badge/Deploy-Docker%20Space-2496ED?logo=docker&logoColor=white)
+
+Context-aware scene segmentation and intelligent ad placement for long-form Bengali video. Movie Ad AI finds natural interruption points, applies explicit pacing rules, rejects unsafe brand contexts, emits VMAP 1.0 with inline VAST 4.2, and demonstrates the result in a player that cuts to the ad and resumes the programme.
 
 [Live Hugging Face Space](https://williyam-movie-ad-ai.hf.space) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md)
 
@@ -42,20 +53,44 @@ flowchart LR
 
 The default CPU profile uses:
 
-- `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` for representative-frame context
-- `faster-whisper/tiny` with int8 CPU inference for Bengali speech timing
-- `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` for multilingual catalogue similarity
-- FFmpeg scene-change and silence evidence as deterministic anchors
+| Layer | Technology | Role |
+| --- | --- | --- |
+| Structural evidence | FFprobe and FFmpeg | Duration, scene-change scores, midpoint frames, and silence intervals |
+| Speech timing | `faster-whisper/tiny` on CTranslate2 int8 | Bengali utterance intervals when no timed subtitle sidecar exists |
+| Visual language model | `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` | Representative-frame activity, mood, description, and safety context |
+| Semantic retrieval | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Normalized multilingual scene-to-catalogue similarity |
+| Policy and API | FastAPI, Pydantic, pure Python scoring | Input validation, hard safety gates, pacing, jobs, and auditable output |
+| Workbench | React 19, TypeScript, Vite, Lucide | Upload controls, progress, decision inspection, and ad-resume playback |
 
 Models load lazily. If any model is unavailable, the job is marked degraded and uses a conservative transcript/lexical fallback; silence and negative-context hard gates remain active.
+
+## Execution path
+
+1. **Bounded ingest:** FastAPI validates the container suffix and MIME type, then writes multipart input in 1 MiB chunks to a random job directory. The transfer is terminated above 400 MiB; catalogue JSON is separately capped at 512 KiB and validated with Pydantic.
+2. **Deterministic evidence:** FFprobe reads programme duration. FFmpeg emits scene-change metadata and `silencedetect` intervals. Cuts closer than 2.5 seconds are merged by keeping the strongest edit.
+3. **Dialogue map:** a timed `.srt` sidecar takes priority for the generated demo. Other videos use faster-whisper tiny with VAD, Bengali decoding, word timestamps, and two CPU threads. Speech overlap is a hard rejection, never a ranking penalty.
+4. **Bounded VLM context:** one 512-pixel midpoint frame per eligible scene is sent to SmolVLM2 for structured activity, mood, description, and safety labels. Visual work stops after `MAX_VLM_SCENES`, when VLM is disabled, or immediately after a model failure.
+5. **Safety and matching:** each boundary combines visual change, local silence, semantic shift, and edge distance only after hard eligibility checks pass. MiniLM embeds free-form catalogue data; a matching negative context removes a brand before the weighted activity ranking runs.
+6. **Pacing and delivery:** safe, matchable candidates are selected under minimum-gap, breaks-per-hour, edge-margin, and ad-load limits. The worker writes a complete debug trace plus VMAP 1.0 with inline VAST 4.2, then the React player pauses content, plays the creative, and resumes.
+
+### Lightweight execution choices
+
+- API startup creates directories and validates the small default catalogue only; demo video and creatives are generated on the first demo request.
+- ASR, VLM, and embedding weights are all loaded on first use and retained for later jobs.
+- Frame extraction is skipped when no VLM can consume a frame, including after a VLM load failure.
+- One analysis worker and two model threads bound CPU and memory pressure on the Space profile.
+- The UI uses one adaptive status request at a time instead of overlapping interval polls.
+- Every model layer has a deterministic fallback, so model download failure does not make the API unavailable.
 
 ## Run locally
 
 Prerequisites: Python 3.11, Node.js 22, npm, and FFmpeg with `ffprobe` recommended.
 
 ```bash
+cd frontend
 npm ci
 npm run build
+cd ..
 
 python3.11 -m venv .venv
 . .venv/bin/activate
@@ -80,15 +115,15 @@ uvicorn backend.app:app --host 0.0.0.0 --port 7860
 
 The first model-backed analysis downloads weights into `HF_HOME`; later jobs reuse them.
 
-For frontend hot reload, run the API on port 7860 and `npm run dev` in another terminal. Vite proxies `/api` and `/media` to FastAPI.
+For frontend hot reload, run the API on port 7860 and `npm --prefix frontend run dev` in another terminal. Vite proxies `/api` and `/media` to FastAPI.
 
 ## Test
 
 ```bash
 python -m ruff check backend scripts tests
 python -m pytest
-npm run lint
-npm run build
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
 
 The suite covers mid-dialogue rejection, silence gating, funeral/food exclusion, an all-brands-blocked no-ad outcome, an unseen ninth brand, pacing limits, generated-video segmentation, VMAP parsing, asynchronous API jobs, and media delivery.
@@ -153,15 +188,15 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for model profiles, health checks, 
 backend/        FastAPI, media evidence, ML adapters, policy, VMAP
 data/           Validated synthetic brand catalogue
 docs/           Architecture and production operations
+frontend/       React/Vite source, package manifests, configs, and static assets
 scripts/        Reproducible demo video/ad generator
-src/            React workbench and ad-resume player
 tests/          Safety, matching, integration, and API tests
 Dockerfile      Hugging Face CPU Space image
 ```
 
 ## Design boundaries
 
-- Chhondo does not infer that an ad must exist; safety can produce an empty schedule.
+- Movie Ad AI does not infer that an ad must exist; safety can produce an empty schedule.
 - The in-memory queue is intentionally single-worker for a 2-vCPU Space. For multi-replica production, replace it with durable object storage and a queue without changing scoring contracts.
 - Generated demo visuals validate the workflow and avoid copyrighted drama footage. They are not a scene-quality benchmark.
 - Automated semantic labels are advisory evidence. Hard audio and negative-context controls are deterministic and visible in debug output.
