@@ -1,0 +1,83 @@
+[
+  {
+    "start": 0,
+    "end": 210,
+    "dominant_activity": "night patrol",
+    "activities": ["patrolling", "conversation"],
+    "contexts": ["police", "night", "outdoors"],
+    "mood": "serious",
+    "description": "Police officers conduct a night patrol and speak with residents near a gated building."
+  },
+  {
+    "start": 210,
+    "end": 310,
+    "dominant_activity": "phone call",
+    "activities": ["calling", "office work"],
+    "contexts": ["phone", "investigation", "office"],
+    "mood": "focused",
+    "description": "An investigation continues through phone calls, office work, and exterior establishing shots."
+  },
+  {
+    "start": 310,
+    "end": 575,
+    "dominant_activity": "eating",
+    "activities": ["eating", "family meal", "conversation"],
+    "contexts": ["restaurant", "food", "dinner"],
+    "mood": "calm",
+    "description": "Several people hold a long conversation over a meal in a restaurant."
+  },
+  {
+    "start": 575,
+    "end": 690,
+    "dominant_activity": "police interview",
+    "activities": ["interviewing", "walking"],
+    "contexts": ["police station", "investigation", "corridor"],
+    "mood": "serious",
+    "description": "Police and civilians move through station corridors during an interview."
+  },
+  {
+    "start": 690,
+    "end": 805,
+    "dominant_activity": "tense conversation",
+    "activities": ["conversation", "questioning"],
+    "contexts": ["conflict", "night", "indoors"],
+    "mood": "tense",
+    "description": "A tense private exchange unfolds at night."
+  },
+  {
+    "start": 805,
+    "end": 945,
+    "dominant_activity": "investigation",
+    "activities": ["investigating", "walking"],
+    "contexts": ["police", "night", "outdoors"],
+    "mood": "serious",
+    "description": "Officers continue a night investigation around the station and nearby streets."
+  },
+  {
+    "start": 945,
+    "end": 1110,
+    "dominant_activity": "emotional confrontation",
+    "activities": ["confrontation", "detention"],
+    "contexts": ["grief", "acute distress", "police station"],
+    "mood": "somber",
+    "description": "An emotional confrontation and detention leave the characters visibly distressed."
+  },
+  {
+    "start": 1110,
+    "end": 1265,
+    "dominant_activity": "phone call",
+    "activities": ["calling", "office conversation"],
+    "contexts": ["phone", "police", "office"],
+    "mood": "focused",
+    "description": "Police discuss the case in an office and make phone calls."
+  },
+  {
+    "start": 1265,
+    "end": 1396.63,
+    "dominant_activity": "quiet conversation",
+    "activities": ["conversation", "reflection"],
+    "contexts": ["home", "night", "closing credits"],
+    "mood": "reflective",
+    "description": "A final conversation moves to a balcony before the closing credits."
+  }
+]
