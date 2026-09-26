@@ -1,1 +1,1 @@
-"""Build and deployment helpers for Chhondo."""
+"""Build and deployment helpers for Movie Ad AI."""
