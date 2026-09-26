@@ -1,0 +1,108 @@
+{
+  "brands": [
+    {
+      "id": "rannabondhu",
+      "name": "RannaBondhu",
+      "category": "meal kits",
+      "description": "A synthetic pantry and meal-kit service for shared home cooking.",
+      "tagline": "Good evenings begin in the kitchen.",
+      "color": "#D94A3D",
+      "target_activities": ["cooking", "eating together", "family dinner"],
+      "positive_contexts": ["kitchen", "family", "celebration", "home"],
+      "negative_contexts": ["funeral", "grief", "death", "medical emergency", "hospital", "injury", "blood", "violence", "nausea", "disaster"],
+      "creative_path": "/media/ads/rannabondhu.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "pothchhaya",
+      "name": "PothChhaya",
+      "category": "travel",
+      "description": "A synthetic local journey planner for thoughtful weekend travel.",
+      "tagline": "Every road keeps a story.",
+      "color": "#247B82",
+      "target_activities": ["travel", "road trip", "train journey", "exploring"],
+      "positive_contexts": ["journey", "friends", "landscape", "adventure"],
+      "negative_contexts": ["funeral", "grief", "medical emergency", "hospital", "violence", "disaster", "accident"],
+      "creative_path": "/media/ads/pothchhaya.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "nirjol",
+      "name": "NirJol",
+      "category": "hydration",
+      "description": "A synthetic hydration brand for active and everyday moments.",
+      "tagline": "A clearer kind of refreshment.",
+      "color": "#2687C8",
+      "target_activities": ["exercise", "walking", "sports", "outdoor activity"],
+      "positive_contexts": ["summer", "fitness", "travel", "sunny day"],
+      "negative_contexts": ["funeral", "grief", "death", "medical emergency", "hospital", "blood", "violence", "alcohol abuse"],
+      "creative_path": "/media/ads/nirjol.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "shobdobox",
+      "name": "ShobdoBox",
+      "category": "personal audio",
+      "description": "A synthetic wireless audio brand for music and focused listening.",
+      "tagline": "Keep every note close.",
+      "color": "#E2A83B",
+      "target_activities": ["listening to music", "dancing", "studying", "commuting"],
+      "positive_contexts": ["music", "youth", "creative work", "travel"],
+      "negative_contexts": ["funeral", "grief", "medical emergency", "violence", "danger", "hearing injury"],
+      "creative_path": "/media/ads/shobdobox.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "bhorfit",
+      "name": "BhorFit",
+      "category": "fitness",
+      "description": "A synthetic guided movement service for healthy daily routines.",
+      "tagline": "Move into a brighter morning.",
+      "color": "#42A66C",
+      "target_activities": ["exercise", "running", "yoga", "sports"],
+      "positive_contexts": ["morning", "park", "wellness", "training"],
+      "negative_contexts": ["funeral", "grief", "injury", "medical emergency", "hospital", "violence", "exhaustion"],
+      "creative_path": "/media/ads/bhorfit.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "aponnest",
+      "name": "AponNest",
+      "category": "home services",
+      "description": "A synthetic home-care membership for comfortable shared spaces.",
+      "tagline": "Care that makes a place your own.",
+      "color": "#B7774D",
+      "target_activities": ["family gathering", "cleaning", "decorating", "moving home"],
+      "positive_contexts": ["home", "family", "new beginning", "celebration"],
+      "negative_contexts": ["funeral", "grief", "domestic violence", "disaster", "eviction", "medical emergency"],
+      "creative_path": "/media/ads/aponnest.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "taralens",
+      "name": "TaraLens",
+      "category": "optics",
+      "description": "A synthetic compact optics brand for night-sky discovery.",
+      "tagline": "Bring the faraway closer.",
+      "color": "#5364A8",
+      "target_activities": ["stargazing", "birdwatching", "nature observation", "exploring"],
+      "positive_contexts": ["night sky", "nature", "curiosity", "learning"],
+      "negative_contexts": ["funeral", "grief", "medical emergency", "violence", "surveillance", "stalking"],
+      "creative_path": "/media/ads/taralens.mp4",
+      "duration_seconds": 6
+    },
+    {
+      "id": "moneralo",
+      "name": "MonerAlo",
+      "category": "mindfulness",
+      "description": "A synthetic mindfulness app for quiet reflection and everyday focus.",
+      "tagline": "Make room for a calmer moment.",
+      "color": "#8A6F9E",
+      "target_activities": ["meditation", "reading", "quiet conversation", "resting"],
+      "positive_contexts": ["calm", "home", "reflection", "morning"],
+      "negative_contexts": ["funeral", "grief", "medical emergency", "violence", "self harm", "acute distress"],
+      "creative_path": "/media/ads/moneralo.mp4",
+      "duration_seconds": 6
+    }
+  ]
+}
