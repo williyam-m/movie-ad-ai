@@ -78,7 +78,8 @@ main { width: min(1600px, 100%); margin: 0 auto; padding: 32px 28px 36px; }
 .workbench {
   display: grid;
   grid-template-columns: 260px minmax(460px, 1fr) 340px;
-  min-height: 630px;
+  grid-template-rows: minmax(0, 1fr);
+  height: 650px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -195,13 +196,27 @@ main { width: min(1600px, 100%); margin: 0 auto; padding: 32px 28px 36px; }
 .story-timeline { margin-top: 16px; }
 .timeline-labels { display: flex; justify-content: space-between; margin-bottom: 7px; color: #77777c; font-size: 8px; font-weight: 700; }
 .timeline-track { position: relative; display: flex; height: 32px; overflow: hidden; border: 1px solid #29292e; border-radius: 4px; background: #161618; }
-.scene-segment { min-width: 1px; height: 100%; border-right: 1px solid #111; }
+.scene-segment { min-width: 1px; height: 100%; padding: 0; border: 0; border-right: 1px solid #111; cursor: pointer; }
+.scene-segment:hover, .scene-segment:focus-visible { filter: brightness(1.45); }
 .scene-0 { background: #26333d; }
 .scene-1 { background: #3c292d; }
 .scene-2 { background: #26372e; }
 .scene-3 { background: #3c3526; }
-.break-marker { position: absolute; z-index: 3; top: -1px; width: 3px; height: 34px; transform: translateX(-1px); background: var(--red-bright); box-shadow: 0 0 0 2px rgba(225, 29, 46, 0.18); }
-.playhead { position: absolute; z-index: 4; top: 0; width: 1px; height: 100%; background: white; }
+.break-marker { position: absolute; z-index: 3; top: -1px; width: 3px; height: 34px; transform: translateX(-1px); background: var(--red-bright); box-shadow: 0 0 0 2px rgba(225, 29, 46, 0.18); pointer-events: none; }
+.playhead { position: absolute; z-index: 4; top: 0; width: 1px; height: 100%; background: white; pointer-events: none; }
+.timeline-scrubber {
+  width: 100%;
+  height: 18px;
+  margin: 5px 0 0;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+}
+.timeline-scrubber::-webkit-slider-runnable-track { height: 3px; background: linear-gradient(90deg, var(--red-bright) var(--progress), #303035 var(--progress)); }
+.timeline-scrubber::-moz-range-track { height: 3px; background: linear-gradient(90deg, var(--red-bright) var(--progress), #303035 var(--progress)); }
+.timeline-scrubber::-webkit-slider-thumb { width: 11px; height: 11px; margin-top: -4px; appearance: none; border: 2px solid #0f0f11; border-radius: 50%; background: white; box-shadow: 0 0 0 1px #77777d; }
+.timeline-scrubber::-moz-range-thumb { width: 9px; height: 9px; border: 2px solid #0f0f11; border-radius: 50%; background: white; box-shadow: 0 0 0 1px #77777d; }
 
 .metric-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 16px; border: 1px solid var(--line); border-radius: 5px; }
 .metric-strip > div { display: flex; min-width: 0; align-items: center; gap: 9px; padding: 13px; border-right: 1px solid var(--line); color: #797980; }
@@ -318,8 +333,27 @@ main { width: min(1600px, 100%); margin: 0 auto; padding: 32px 28px 36px; }
 .stage-metric strong { color: #d6d6da; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .stage-metric span { margin-top: 4px; color: #65656c; font-size: 7px; text-transform: uppercase; }
 
+.audit-ledger { margin-top: 96px; padding: 42px 0 56px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.audit-ledger header { display: flex; align-items: end; justify-content: space-between; gap: 32px; margin-bottom: 42px; }
+.audit-ledger header .eyebrow { margin: 0; }
+.audit-ledger h2 { max-width: 570px; margin: 0; font-size: 29px; font-weight: 600; }
+.ledger-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ledger-grid article { min-width: 0; padding: 20px 22px 4px; border-left: 1px solid var(--line); }
+.ledger-grid article:first-child { padding-left: 0; border-left: 0; }
+.ledger-grid span { color: #696970; font-size: 8px; font-weight: 800; }
+.ledger-grid strong { display: block; overflow-wrap: anywhere; margin-top: 15px; color: #e8e8ea; font-size: 15px; font-weight: 600; }
+.ledger-grid article:nth-child(3) strong { text-transform: capitalize; }
+.ledger-grid p { margin: 8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.6; }
+
+.site-footer { display: grid; width: min(1600px, calc(100% - 56px)); min-height: 112px; grid-template-columns: auto 1fr auto; align-items: center; gap: 32px; margin: 0 auto; color: #696970; font-size: 9px; }
+.footer-mark { display: flex; align-items: center; gap: 8px; }
+.footer-mark strong { color: var(--red-bright); font-size: 15px; }
+.footer-mark span { padding: 3px 5px; border: 1px solid #4b292d; border-radius: 3px; color: #e7b5ba; font-size: 7px; font-weight: 700; }
+.site-footer p { margin: 0; }
+.site-footer > span { text-align: right; }
+
 @media (max-width: 1180px) {
-  .workbench { grid-template-columns: 230px minmax(430px, 1fr); }
+  .workbench { height: auto; grid-template-columns: 230px minmax(430px, 1fr); }
   .insight-panel { grid-column: 1 / -1; min-height: 410px; border-top: 1px solid var(--line); border-left: 0; }
   .insight-scroll { max-height: 430px; }
   .trust-strip { grid-template-columns: repeat(2, 1fr); }
@@ -353,6 +387,14 @@ main { width: min(1600px, 100%); margin: 0 auto; padding: 32px 28px 36px; }
   .console-icon { margin-top: 36px; }
   .pipeline-stages li { min-height: 0; grid-template-columns: 38px minmax(0, 1fr); gap: 14px; padding: 28px 0; opacity: 1; transform: none; }
   .stage-metric { grid-column: 2; align-items: flex-start; padding-top: 0; text-align: left; }
+  .audit-ledger { margin-top: 58px; padding: 32px 0 42px; }
+  .audit-ledger header { align-items: flex-start; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .audit-ledger h2 { font-size: 23px; }
+  .ledger-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ledger-grid article { padding: 18px 14px; border-top: 1px solid var(--line); }
+  .ledger-grid article:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .site-footer { width: calc(100% - 28px); grid-template-columns: 1fr; gap: 8px; padding: 28px 0; }
+  .site-footer > span { text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {
