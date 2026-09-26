@@ -4,7 +4,6 @@ emoji: 🎬
 colorFrom: red
 colorTo: gray
 sdk: static
-app_build_command: cd frontend && npm ci && VITE_STATIC_SPACE=true npm run build
 app_file: frontend/dist/index.html
 pinned: false
 ---
@@ -170,7 +169,7 @@ The catalogue accepts an object with a `brands` array. Matching uses only these 
 
 ## Deploy
 
-The public Hugging Face deployment uses the free Static SDK. It serves a verified analysis snapshot with programme/ad playback, policy controls, VMAP export, debug JSON, and the full decision inspector. Video upload and new model inference require the Docker profile because Static Spaces do not run Python, FFmpeg, or model processes.
+The public Hugging Face deployment uses the free Static SDK. It serves the committed `frontend/dist` build directly, avoiding both compute and hosted build credits. The app includes a verified analysis snapshot with programme/ad playback, policy controls, VMAP export, debug JSON, and the full decision inspector. Video upload and new model inference require the Docker profile because Static Spaces do not run Python, FFmpeg, or model processes.
 
 ```bash
 hf auth login --add-to-git-credential

@@ -34,7 +34,7 @@ The frontend is compiled in a Node 22 build stage. The runtime image contains Py
 
 ## Deployment checklist
 
-The public free-tier deployment is a Static Space. Hugging Face builds the React app with `VITE_STATIC_SPACE=true`; it exposes the verified bundled sample without allocating compute. The Docker checklist below applies when deploying the live upload and model pipeline to compute-backed hosting.
+The public free-tier deployment is a Static Space. The prebuilt `frontend/dist` directory exposes the verified bundled sample without allocating compute or using hosted build credits. Rebuild it with `VITE_STATIC_SPACE=true npm --prefix frontend run build` before publishing. The Docker checklist below applies when deploying the live upload and model pipeline to compute-backed hosting.
 
 1. Run the local quality gate.
 2. Ensure the Space SDK is Docker and port is 7860.
