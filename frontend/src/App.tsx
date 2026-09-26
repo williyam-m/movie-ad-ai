@@ -21,6 +21,7 @@ import {
   fetchHealth,
   fetchJob,
   MAX_UPLOAD_BYTES,
+  STATIC_MODE,
   startDemo,
   uploadVideo,
 } from './api'
@@ -163,7 +164,7 @@ function App() {
         </div>
         <div className={`service-state ${apiOnline ? 'online' : ''}`}>
           <span />
-          {apiOnline === null ? 'Checking API' : apiOnline ? 'System ready' : 'API offline'}
+          {STATIC_MODE ? 'Verified demo' : apiOnline === null ? 'Checking API' : apiOnline ? 'System ready' : 'API offline'}
         </div>
       </header>
 
@@ -189,10 +190,10 @@ function App() {
               </div>
             </div>
 
-            <button className="dropzone" type="button" onClick={() => videoInput.current?.click()}>
+            <button className="dropzone" type="button" onClick={() => videoInput.current?.click()} disabled={STATIC_MODE}>
               <Upload size={22} />
-              <strong>{selectedVideo?.name ?? 'Choose a video'}</strong>
-              <span>{selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 400 MB'}</span>
+              <strong>{STATIC_MODE ? 'Sample drama bundled' : selectedVideo?.name ?? 'Choose a video'}</strong>
+              <span>{STATIC_MODE ? 'Uploads available in Docker mode' : selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 400 MB'}</span>
             </button>
             <input
               ref={videoInput}
@@ -238,9 +239,9 @@ function App() {
               /><small>%</small></div>
             </label>
 
-            <button className="catalogue-picker" type="button" onClick={() => catalogueInput.current?.click()}>
+            <button className="catalogue-picker" type="button" onClick={() => catalogueInput.current?.click()} disabled={STATIC_MODE}>
               <FileJson size={17} />
-              <span>{selectedCatalogue?.name ?? 'Use a custom brand catalogue'}</span>
+              <span>{STATIC_MODE ? 'Bundled brand catalogue' : selectedCatalogue?.name ?? 'Use a custom brand catalogue'}</span>
               <ChevronRight size={16} />
             </button>
             <input
@@ -251,9 +252,9 @@ function App() {
               onChange={(event) => setSelectedCatalogue(event.target.files?.[0] ?? null)}
             />
 
-            <button className="analyse-button" type="button" onClick={analyseUpload} disabled={isBusy}>
+            <button className="analyse-button" type="button" onClick={STATIC_MODE ? runDemo : analyseUpload} disabled={isBusy}>
               {isBusy ? <LoaderCircle className="spin" size={18} /> : <Sparkles size={18} />}
-              {isBusy ? 'Analysing story' : 'Analyse placement'}
+              {isBusy ? 'Analysing story' : STATIC_MODE ? 'Apply policy to sample' : 'Analyse placement'}
             </button>
           </aside>
 

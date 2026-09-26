@@ -34,6 +34,8 @@ The frontend is compiled in a Node 22 build stage. The runtime image contains Py
 
 ## Deployment checklist
 
+The public free-tier deployment is a Static Space. Hugging Face builds the React app with `VITE_STATIC_SPACE=true`; it exposes the verified bundled sample without allocating compute. The Docker checklist below applies when deploying the live upload and model pipeline to compute-backed hosting.
+
 1. Run the local quality gate.
 2. Ensure the Space SDK is Docker and port is 7860.
 3. Set `PUBLIC_BASE_URL` to the final `https://<owner>-<space>.hf.space` origin.
@@ -46,15 +48,15 @@ The frontend is compiled in a Node 22 build stage. The runtime image contains Py
 ## Health and verification
 
 ```bash
-curl -fsS https://williyam-movie-ad-ai.hf.space/api/health
+curl -fsS https://williyam-m-movie-ad-ai.hf.space/api/health
 
 JOB_ID=$(curl -fsS -X POST \
   -H 'content-type: application/json' \
   -d '{"max_breaks_per_hour":4,"min_gap_seconds":30,"max_ad_load_percent":8}' \
-  https://williyam-movie-ad-ai.hf.space/api/demo | python -c \
+  https://williyam-m-movie-ad-ai.hf.space/api/demo | python -c \
   'import json,sys; print(json.load(sys.stdin)["id"])')
 
-curl -fsS "https://williyam-movie-ad-ai.hf.space/api/jobs/$JOB_ID"
+curl -fsS "https://williyam-m-movie-ad-ai.hf.space/api/jobs/$JOB_ID"
 ```
 
 Expected sample characteristics in deterministic mode are five scenes, four visual candidates, four safe boundaries, one scheduled break, and ad load below 8%. Model-backed context may change semantic scores and the winning safe timestamp, but it must not violate hard gates.

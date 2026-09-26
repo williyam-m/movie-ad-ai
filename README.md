@@ -3,8 +3,9 @@ title: Movie Ad AI
 emoji: 🎬
 colorFrom: red
 colorTo: gray
-sdk: docker
-app_port: 7860
+sdk: static
+app_build_command: cd frontend && npm ci && VITE_STATIC_SPACE=true npm run build
+app_file: frontend/dist/index.html
 pinned: false
 ---
 
@@ -23,7 +24,7 @@ pinned: false
 
 Context-aware scene segmentation and intelligent ad placement for long-form Bengali video. Movie Ad AI finds natural interruption points, applies explicit pacing rules, rejects unsafe brand contexts, emits VMAP 1.0 with inline VAST 4.2, and demonstrates the result in a player that cuts to the ad and resumes the programme.
 
-[Live Hugging Face Space](https://williyam-movie-ad-ai.hf.space) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md)
+[Live Hugging Face Space](https://williyam-m-movie-ad-ai.hf.space) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md)
 
 ## What it guarantees
 
@@ -94,7 +95,9 @@ cd ..
 
 python3.11 -m venv .venv
 . .venv/bin/activate
-pip install -r requirements-core.txt
+pip install --index-url https://download.pytorch.org/whl/cpu \
+  torch==2.7.1 torchvision==0.22.1
+pip install -r requirements.txt
 
 ENABLE_ASR=false \
 ENABLE_VLM=false \
@@ -104,12 +107,9 @@ uvicorn backend.app:app --host 0.0.0.0 --port 7860
 
 Open `http://localhost:7860`. The deterministic profile still performs real FFmpeg segmentation, silence detection, subtitle timing, safety scoring, pacing, matching, VMAP generation, and playback.
 
-For the full model profile on CPU:
+For the full model profile on CPU, use the same installation above and enable the models:
 
 ```bash
-pip install --index-url https://download.pytorch.org/whl/cpu \
-  torch==2.7.1 torchvision==0.22.1
-pip install -r requirements.txt
 uvicorn backend.app:app --host 0.0.0.0 --port 7860
 ```
 
@@ -170,15 +170,16 @@ The catalogue accepts an object with a `brands` array. Matching uses only these 
 
 ## Deploy
 
-The repository is a Docker Space. A push to the Hugging Face Space repository triggers the multi-stage build and exposes port 7860. The image runs as UID 1000, generates copyright-safe demo media at startup, and stores jobs/model cache under `/data`.
+The public Hugging Face deployment uses the free Static SDK. It serves a verified analysis snapshot with programme/ad playback, policy controls, VMAP export, debug JSON, and the full decision inspector. Video upload and new model inference require the Docker profile because Static Spaces do not run Python, FFmpeg, or model processes.
 
 ```bash
-hf auth login
-hf repo create movie-ad-ai --type space --space-sdk docker
+hf auth login --add-to-git-credential
+hf repos create williyam-m/movie-ad-ai --type space --sdk static
+git remote set-url space https://huggingface.co/spaces/williyam-m/movie-ad-ai
 git push space main
 ```
 
-Set `PUBLIC_BASE_URL=https://williyam-movie-ad-ai.hf.space` in the Space variables so VMAP media and impression URLs are absolute.
+For a compute-backed deployment, change the Space metadata to `sdk: docker`, set `PUBLIC_BASE_URL=https://williyam-m-movie-ad-ai.hf.space`, and deploy with the included Dockerfile. New Docker Spaces require an eligible paid Hugging Face plan.
 
 See [docs/OPERATIONS.md](docs/OPERATIONS.md) for model profiles, health checks, limits, and incident handling.
 
