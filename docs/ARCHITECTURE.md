@@ -1,8 +1,8 @@
-# Chhondo Technical Design
+# Movie Ad AI Technical Design
 
 ## 1. Goals and constraints
 
-Chhondo converts a long-form Bengali drama and a synthetic brand catalogue into a safe, paced ad schedule. The target runtime is a Hugging Face Docker Space with 2 vCPU, 16 GB RAM, and 50 GB disk.
+Movie Ad AI converts a long-form Bengali drama and a synthetic brand catalogue into a safe, paced ad schedule. The target runtime is a Hugging Face Docker Space with 2 vCPU, 16 GB RAM, and 50 GB disk.
 
 The primary quality order is:
 
@@ -74,7 +74,8 @@ flowchart TB
 | `backend/pipeline.py` | Stage orchestration and result assembly |
 | `backend/vmap.py` | VMAP 1.0 and inline VAST 4.2 serialization |
 | `backend/app.py` | HTTP validation, jobs, artefacts, media, and frontend serving |
-| `src/components/AdPlayer.tsx` | Runtime content-to-ad-to-content transition |
+| `frontend/src/components/AdPlayer.tsx` | Runtime content-to-ad-to-content transition |
+| `frontend/src/components/PipelineExplainer.tsx` | Scroll-driven execution and model trace |
 
 ## 3. End-to-end flow
 
@@ -112,7 +113,7 @@ Visual cuts remain the segmentation anchor. Model-generated text never invents a
 
 ## 5. Where: interruption safety
 
-For a visual boundary at time `t`, Chhondo records:
+For a visual boundary at time `t`, Movie Ad AI records:
 
 - `V`: FFmpeg scene-change strength in `[0, 1]`
 - `S`: local silence duration normalized at 1.2 seconds
@@ -170,7 +171,7 @@ The multilingual MiniLM adapter embeds arbitrary catalogue text, so a ninth bran
 | Semantic matching | multilingual MiniLM L12 v2 | Cross-language context similarity | Lazy, normalized embeddings |
 | Structural evidence | FFmpeg | Cuts, silence, frames, metadata | Per job |
 
-Only one analysis runs at a time. PyTorch and model threads are capped at two. Embeddings are cached per process. VLM work is capped by `MAX_VLM_SCENES`; later scenes retain transcript-derived context instead of exhausting CPU.
+Only one analysis runs at a time. PyTorch and model threads are capped at two. Embeddings are cached per process. VLM work is capped by `MAX_VLM_SCENES`; later scenes retain transcript-derived context instead of exhausting CPU. Demo media is generated on demand rather than at process startup, and frame extraction stops whenever VLM is disabled or unavailable.
 
 ## 9. Outputs
 
@@ -188,7 +189,7 @@ The React player tracks content time against scheduled slots. At a boundary it p
 
 ## 10. Security and privacy
 
-- Uploads stream in 1 MB chunks and stop at 2 GB by default.
+- Uploads stream in 1 MiB chunks and stop at 400 MiB by default.
 - File suffix and media type are allowlisted; FFmpeg performs the final structural validation.
 - Client filenames are reduced to a basename and never become storage paths.
 - Job IDs are random 128-bit values.
