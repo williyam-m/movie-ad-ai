@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -61,7 +62,13 @@ async def _store_upload(
 def create_app(settings: Settings | None = None) -> FastAPI:
     active_settings = settings or Settings()
     active_settings.ensure_directories()
-    catalogue_path = active_settings.root_dir / "data" / "brands.json"
+    supplied_demo_path = active_settings.demo_dir / "mohanagar.mp4"
+    supplied_catalogue_path = active_settings.demo_dir / "brands.json"
+    catalogue_path = (
+        supplied_catalogue_path
+        if supplied_demo_path.is_file() and supplied_catalogue_path.is_file()
+        else active_settings.root_dir / "data" / "brands.json"
+    )
     default_catalogue = load_catalogue(catalogue_path)
     store = JobStore()
     executor = ThreadPoolExecutor(
@@ -171,8 +178,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         submit_job(
             record,
             demo_path,
-            "movie-ad-ai-demo.mp4",
-            "/media/demo/movie-ad-ai-demo.mp4",
+            demo_path.name,
+            f"/media/demo/{demo_path.name}",
             default_catalogue,
             PacingPolicy(**request.model_dump()),
         )
@@ -214,6 +221,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         job_dir = active_settings.jobs_dir / record.id
         source_path = job_dir / f"source{suffix}"
         await _store_upload(video, source_path, active_settings.max_upload_bytes)
+        bundled_scene_context = (
+            active_settings.root_dir
+            / "data"
+            / "demo"
+            / f"{Path(source_name).stem.casefold()}.scenes.json"
+        )
+        if bundled_scene_context.is_file():
+            shutil.copyfile(
+                bundled_scene_context, source_path.with_suffix(".scenes.json")
+            )
         if catalogue_content is not None:
             (job_dir / "catalogue.json").write_bytes(catalogue_content)
         media_url = f"/media/jobs/{record.id}/{source_path.name}"
