@@ -4,10 +4,14 @@ import json
 import shutil
 import subprocess
 import tempfile
+import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from backend.config import Settings
+
+MEDIA_GENERATION_LOCK = threading.Lock()
 
 SCENES: tuple[dict[str, Any], ...] = (
     {
@@ -70,7 +74,7 @@ def _font_path() -> Path | None:
     return next((path for path in candidates if path.exists()), None)
 
 
-def _video_filter(title: str, color: str) -> str:
+def _video_filter(title: str) -> str:
     filters = [
         "drawbox=x=0:y=0:w=iw:h=12:color=white@0.16:t=fill",
         "drawbox=x=70:y=70:w=220:h=220:color=white@0.06:t=fill",
@@ -86,7 +90,7 @@ def _video_filter(title: str, color: str) -> str:
         )
         filters.append(
             "drawtext="
-            f"fontfile='{font_path}':text='CHHONDO ORIGINAL':"
+            f"fontfile='{font_path}':text='MOVIE AD AI DEMO':"
             "fontcolor=white@0.65:fontsize=13:x=72:y=h-62"
         )
     return ",".join(filters)
@@ -113,15 +117,27 @@ def _write_demo_subtitles(path: Path) -> None:
     path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
 
 
+def _generate_atomically(output_path: Path, builder: Callable[[Path], None]) -> None:
+    partial_path = output_path.with_name(
+        f".{output_path.stem}.partial{output_path.suffix}"
+    )
+    partial_path.unlink(missing_ok=True)
+    try:
+        builder(partial_path)
+        partial_path.replace(output_path)
+    finally:
+        partial_path.unlink(missing_ok=True)
+
+
 def _build_demo_video(output_path: Path, settings: Settings) -> None:
-    with tempfile.TemporaryDirectory(prefix="chhondo-demo-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="movie-ad-ai-demo-") as temporary:
         temporary_path = Path(temporary)
         segments: list[Path] = []
         for index, scene in enumerate(SCENES):
             segment_path = temporary_path / f"scene-{index:02}.mp4"
             duration = float(scene["duration"])
             sound_duration = duration - 1.2
-            scene_filter = _video_filter(str(scene["title"]), str(scene["color"]))
+            scene_filter = _video_filter(str(scene["title"]))
             _run(
                 [
                     settings.ffmpeg_binary,
@@ -211,7 +227,7 @@ def _build_ad(
             "-i",
             f"sine=frequency={360 + index * 34}:sample_rate=48000:duration={duration}",
             "-filter_complex",
-            f"[0:v]{_video_filter(str(brand['name']), str(brand['color']))}[v];"
+            f"[0:v]{_video_filter(str(brand['name']))}[v];"
             "[1:a]volume=0.035[a]",
             "-map",
             "[v]",
@@ -245,19 +261,30 @@ def ensure_demo_media(settings: Settings | None = None) -> Path:
     if shutil.which(active_settings.ffmpeg_binary) is None:
         raise RuntimeError("ffmpeg is required to generate demo media")
 
-    demo_path = active_settings.demo_dir / "chhondo-demo.mp4"
-    subtitle_path = demo_path.with_suffix(".srt")
-    if not demo_path.exists():
-        _build_demo_video(demo_path, active_settings)
-    _write_demo_subtitles(subtitle_path)
+    demo_path = active_settings.demo_dir / "movie-ad-ai-demo.mp4"
+    with MEDIA_GENERATION_LOCK:
+        subtitle_path = demo_path.with_suffix(".srt")
+        if not demo_path.exists():
+            _generate_atomically(
+                demo_path,
+                lambda output_path: _build_demo_video(output_path, active_settings),
+            )
+        _write_demo_subtitles(subtitle_path)
 
-    catalogue = json.loads(
-        (active_settings.root_dir / "data" / "brands.json").read_text(encoding="utf-8")
-    )["brands"]
-    for index, brand in enumerate(catalogue):
-        output_path = active_settings.ads_dir / f"{brand['id']}.mp4"
-        if not output_path.exists():
-            _build_ad(output_path, brand, index, active_settings)
+        catalogue = json.loads(
+            (active_settings.root_dir / "data" / "brands.json").read_text(
+                encoding="utf-8"
+            )
+        )["brands"]
+        for index, brand in enumerate(catalogue):
+            output_path = active_settings.ads_dir / f"{brand['id']}.mp4"
+            if not output_path.exists():
+                _generate_atomically(
+                    output_path,
+                    lambda partial_path, item=brand, item_index=index: _build_ad(
+                        partial_path, item, item_index, active_settings
+                    ),
+                )
     return demo_path
 
 
