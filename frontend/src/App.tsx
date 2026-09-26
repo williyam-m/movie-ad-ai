@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import {
   Activity,
   AlertTriangle,
@@ -15,8 +16,16 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react'
-import { fetchCatalogue, fetchHealth, fetchJob, startDemo, uploadVideo } from './api'
+import {
+  fetchCatalogue,
+  fetchHealth,
+  fetchJob,
+  MAX_UPLOAD_BYTES,
+  startDemo,
+  uploadVideo,
+} from './api'
 import { AdPlayer } from './components/AdPlayer'
+import { PipelineExplainer } from './components/PipelineExplainer'
 import type { AnalysisJob, Brand, PolicyInput } from './types'
 import './App.css'
 
@@ -55,6 +64,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<InsightTab>('breaks')
   const [playhead, setPlayhead] = useState(0)
   const [apiOnline, setApiOnline] = useState<boolean | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const jobId = job?.id
   const jobStatus = job?.status
@@ -66,24 +76,55 @@ function App() {
 
   useEffect(() => {
     if (!jobId || (jobStatus !== 'queued' && jobStatus !== 'running')) return
-    const timer = window.setInterval(() => {
-      void fetchJob(jobId)
-        .then((nextJob) => {
+    let cancelled = false
+    let timer: number
+
+    const poll = async () => {
+      try {
+        const nextJob = await fetchJob(jobId)
+        if (!cancelled) {
           setJob(nextJob)
           if (nextJob.status === 'failed') setError(nextJob.error ?? 'Analysis failed')
-        })
-        .catch((requestError: Error) => setError(requestError.message))
-    }, 1200)
-    return () => window.clearInterval(timer)
+          if (nextJob.status === 'queued' || nextJob.status === 'running') {
+            timer = window.setTimeout(poll, nextJob.status === 'queued' ? 2200 : 1600)
+          }
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError instanceof Error ? requestError.message : 'Status request failed')
+        }
+      }
+    }
+
+    timer = window.setTimeout(poll, 800)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [jobId, jobStatus])
+
+  const selectVideo = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+    if (file && file.size > MAX_UPLOAD_BYTES) {
+      setSelectedVideo(null)
+      setError('Video exceeds the 400 MB upload limit')
+      event.target.value = ''
+      return
+    }
+    setError(null)
+    setSelectedVideo(file)
+  }
 
   const runDemo = async () => {
     setError(null)
     setPlayhead(0)
+    setIsSubmitting(true)
     try {
       setJob(await startDemo(policy))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to start demo')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -94,27 +135,30 @@ function App() {
     }
     setError(null)
     setPlayhead(0)
+    setIsSubmitting(true)
     try {
       setJob(await uploadVideo(selectedVideo, policy, selectedCatalogue ?? undefined))
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Upload failed')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const result = job?.result
-  const isBusy = job?.status === 'queued' || job?.status === 'running'
+  const isBusy = isSubmitting || job?.status === 'queued' || job?.status === 'running'
   const progress = job?.progress ?? 0
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="wordmark" aria-label="hoichoi">
-          <span>hoichoi</span>
-          <i>LABS</i>
+        <div className="wordmark" aria-label="Movie Ad AI">
+          <span>MOVIE</span>
+          <i>AD AI</i>
         </div>
         <div className="product-name">
           <Film size={17} aria-hidden="true" />
-          <strong>CHHONDO</strong>
+          <strong>CONTEXT ENGINE</strong>
           <span>Contextual ad intelligence</span>
         </div>
         <div className={`service-state ${apiOnline ? 'online' : ''}`}>
@@ -148,14 +192,14 @@ function App() {
             <button className="dropzone" type="button" onClick={() => videoInput.current?.click()}>
               <Upload size={22} />
               <strong>{selectedVideo?.name ?? 'Choose a video'}</strong>
-              <span>{selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 2 GB'}</span>
+              <span>{selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 400 MB'}</span>
             </button>
             <input
               ref={videoInput}
               type="file"
               accept="video/mp4,video/quicktime,video/x-matroska,video/webm"
               hidden
-              onChange={(event) => setSelectedVideo(event.target.files?.[0] ?? null)}
+              onChange={selectVideo}
             />
 
             <div className="policy-heading">
@@ -358,6 +402,8 @@ function App() {
           <div><Sparkles size={20} /><span><strong>Open catalogue</strong>New brands need no code change</span></div>
           <div className="model-note"><span>MODEL PROFILE</span><strong>{result?.models.visual ?? 'SmolVLM2 256M · Whisper tiny'}</strong></div>
         </section>
+
+        <PipelineExplainer />
       </main>
     </div>
   )
