@@ -1,16 +1,13 @@
 {
-  "name": "movie-ad-ai",
+  "name": "movie-ad-ai-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api": "uvicorn backend.app:app --host 0.0.0.0 --port 7860 --reload",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "python -m pytest",
-    "check": "npm run lint && npm run build && python -m pytest"
+    "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^1.48.0",
