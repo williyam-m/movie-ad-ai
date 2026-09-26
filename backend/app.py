@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,7 +20,7 @@ from backend.pipeline import VideoAnalysisPipeline
 from backend.schemas import Brand, DemoRequest, JobRecord, PacingPolicy
 from scripts.generate_demo_media import ensure_demo_media
 
-LOGGER = logging.getLogger("chhondo")
+LOGGER = logging.getLogger("movie_ad_ai")
 ALLOWED_VIDEO_SUFFIXES = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 ALLOWED_VIDEO_TYPES = {
     "video/mp4",
@@ -44,7 +44,7 @@ async def _store_upload(
                 total_bytes += len(chunk)
                 if total_bytes > maximum_bytes:
                     raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail=f"Upload exceeds the {maximum_megabytes} MB limit",
                     )
                 output.write(chunk)
@@ -64,18 +64,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     catalogue_path = active_settings.root_dir / "data" / "brands.json"
     default_catalogue = load_catalogue(catalogue_path)
     store = JobStore()
-    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="chhondo-analysis")
+    executor = ThreadPoolExecutor(
+        max_workers=1, thread_name_prefix="movie-ad-analysis"
+    )
     models = ModelRuntime(active_settings)
     pipeline = VideoAnalysisPipeline(active_settings, models)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        await asyncio.to_thread(ensure_demo_media, active_settings)
+    async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
         yield
         executor.shutdown(wait=False, cancel_futures=True)
 
     application = FastAPI(
-        title="Chhondo Contextual Ad Intelligence",
+        title="Movie Ad AI",
         version="1.0.0",
         docs_url="/api/docs",
         redoc_url=None,
@@ -141,7 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health() -> dict[str, object]:
         return {
             "status": "ok",
-            "service": "chhondo",
+            "service": "movie-ad-ai",
             "version": application.version,
             "models": {
                 "visual": active_settings.vlm_model_id,
@@ -165,15 +166,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         status_code=status.HTTP_202_ACCEPTED,
     )
     async def start_demo(request: DemoRequest) -> JobRecord:
-        demo_path = active_settings.demo_dir / "chhondo-demo.mp4"
-        if not demo_path.exists():
-            await asyncio.to_thread(ensure_demo_media, active_settings)
+        demo_path = await asyncio.to_thread(ensure_demo_media, active_settings)
         record = store.create()
         submit_job(
             record,
             demo_path,
-            "chhondo-demo.mp4",
-            "/media/demo/chhondo-demo.mp4",
+            "movie-ad-ai-demo.mp4",
+            "/media/demo/movie-ad-ai-demo.mp4",
             default_catalogue,
             PacingPolicy(**request.model_dump()),
         )
@@ -279,7 +278,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.mount(
         "/",
         StaticFiles(
-            directory=str(active_settings.root_dir / "dist"), html=True, check_dir=False
+            directory=str(active_settings.root_dir / "frontend" / "dist"),
+            html=True,
+            check_dir=False,
         ),
         name="frontend",
     )
