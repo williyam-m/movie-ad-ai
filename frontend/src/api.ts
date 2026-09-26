@@ -1,5 +1,7 @@
 import type { AnalysisJob, Brand, PolicyInput } from './types'
 
+export const MAX_UPLOAD_BYTES = 400 * 1024 * 1024
+
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
@@ -43,6 +45,9 @@ export async function uploadVideo(
   policy: PolicyInput,
   catalogue?: File,
 ): Promise<AnalysisJob> {
+  if (video.size > MAX_UPLOAD_BYTES) {
+    throw new Error('Video exceeds the 400 MB upload limit')
+  }
   const data = new FormData()
   data.append('video', video)
   data.append('max_breaks_per_hour', String(policy.maxBreaksPerHour))
