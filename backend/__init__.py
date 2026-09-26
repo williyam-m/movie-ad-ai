@@ -1,1 +1,1 @@
-"""Chhondo context-aware ad placement service."""
+"""Context-aware movie ad placement service."""
