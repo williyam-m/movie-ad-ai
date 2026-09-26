@@ -23,7 +23,7 @@ pinned: false
 
 Context-aware scene segmentation and intelligent ad placement for long-form Bengali video. Movie Ad AI finds natural interruption points, applies explicit pacing rules, rejects unsafe brand contexts, emits VMAP 1.0 with inline VAST 4.2, and demonstrates the result in a player that cuts to the ad and resumes the programme.
 
-[Live Hugging Face Space](https://williyam-m-movie-ad-ai.hf.space) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md)
+[Live Hugging Face Space](https://williyam-m-movie-ad-ai.static.hf.space) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md)
 
 ## What it guarantees
 
