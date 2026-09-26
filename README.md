@@ -69,7 +69,7 @@ Models load lazily. If any model is unavailable, the job is marked degraded and 
 1. **Bounded ingest:** FastAPI validates the container suffix and MIME type, then writes multipart input in 1 MiB chunks to a random job directory. The transfer is terminated above 400 MiB; catalogue JSON is separately capped at 512 KiB and validated with Pydantic.
 2. **Deterministic evidence:** FFprobe reads programme duration. FFmpeg emits scene-change metadata and `silencedetect` intervals. Cuts closer than 2.5 seconds are merged by keeping the strongest edit.
 3. **Dialogue map:** a timed `.srt` sidecar takes priority for the generated demo. Other videos use faster-whisper tiny with VAD, Bengali decoding, word timestamps, and two CPU threads. Speech overlap is a hard rejection, never a ranking penalty.
-4. **Bounded VLM context:** one 512-pixel midpoint frame per eligible scene is sent to SmolVLM2 for structured activity, mood, description, and safety labels. Visual work stops after `MAX_VLM_SCENES`, when VLM is disabled, or immediately after a model failure.
+4. **Bounded VLM context:** one 512-pixel midpoint frame per eligible scene is sent to SmolVLM2 for structured activity, mood, description, and safety labels. Visual work stops after `MAX_VLM_SCENES`, when VLM is disabled, or immediately after a model failure. A validated `.scenes.json` sidecar can provide timed fallback context for a known demo asset.
 5. **Safety and matching:** each boundary combines visual change, local silence, semantic shift, and edge distance only after hard eligibility checks pass. MiniLM embeds free-form catalogue data; a matching negative context removes a brand before the weighted activity ranking runs.
 6. **Pacing and delivery:** safe, matchable candidates are selected under minimum-gap, breaks-per-hour, edge-margin, and ad-load limits. The worker writes a complete debug trace plus VMAP 1.0 with inline VAST 4.2, then the React player pauses content, plays the creative, and resumes.
 
@@ -80,7 +80,7 @@ Models load lazily. If any model is unavailable, the job is marked degraded and 
 - Frame extraction is skipped when no VLM can consume a frame, including after a VLM load failure.
 - One analysis worker and two model threads bound CPU and memory pressure on the Space profile.
 - The UI uses one adaptive status request at a time instead of overlapping interval polls.
-- Every model layer has a deterministic fallback, so model download failure does not make the API unavailable.
+- Every model layer has a deterministic fallback, so model download failure does not make the API unavailable. Supplied demo metadata remains advisory; FFmpeg silence and policy gates still decide whether a break is safe.
 
 ## Run locally
 
