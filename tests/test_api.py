@@ -5,11 +5,33 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
+from backend.catalogue import parse_catalogue
 from backend.config import Settings
 
 
 def test_default_upload_limit_is_400_mib() -> None:
     assert Settings().max_upload_bytes == 400 * 1024**2
+
+
+def test_supplied_demo_catalogue_is_adapted_to_public_categories() -> None:
+    brands = parse_catalogue(
+        [
+            {
+                "brand_id": "brand_a",
+                "display_name": "Brand A",
+                "category": "food/spices/cooking",
+                "target_contexts": ["cooking", "family meal"],
+                "negative_contexts": ["funeral"],
+                "creatives": [{"duration_sec": 15, "url": "ads/a.mp4"}],
+            }
+        ]
+    )
+
+    assert brands[0].id == "brand-a"
+    assert brands[0].name == "Food & Spices"
+    assert brands[0].category == "food"
+    assert brands[0].creative_path == "/media/ads/brand-a.mp4"
+    assert brands[0].duration_seconds == 15
 
 
 def test_startup_does_not_generate_demo_media(tmp_path: Path) -> None:
