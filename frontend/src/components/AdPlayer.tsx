@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Pause, Play, RotateCcw, Volume2 } from 'lucide-react'
 import type { AnalysisResult, BreakSlot } from '../types'
@@ -6,6 +6,10 @@ import type { AnalysisResult, BreakSlot } from '../types'
 interface AdPlayerProps {
   result: AnalysisResult
   onTimeChange: (time: number) => void
+}
+
+export interface AdPlayerHandle {
+  seekTo: (time: number) => void
 }
 
 function formatTime(seconds: number): string {
@@ -18,13 +22,38 @@ function formatTime(seconds: number): string {
     : `${minutes}:${String(remainder).padStart(2, '0')}`
 }
 
-export function AdPlayer({ result, onTimeChange }: AdPlayerProps) {
+export const AdPlayer = forwardRef<AdPlayerHandle, AdPlayerProps>(function AdPlayer(
+  { result, onTimeChange },
+  ref,
+) {
   const contentRef = useRef<HTMLVideoElement>(null)
   const adRef = useRef<HTMLVideoElement>(null)
   const [activeBreak, setActiveBreak] = useState<BreakSlot | null>(null)
   const [playedBreaks, setPlayedBreaks] = useState<Set<string>>(new Set())
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
+
+  const seekTo = (time: number) => {
+    const content = contentRef.current
+    if (!content) return
+    const boundedTime = Math.max(0, Math.min(time, result.duration_seconds))
+    const shouldResume = activeBreak ? !adRef.current?.paused : !content.paused
+    adRef.current?.pause()
+    setActiveBreak(null)
+    setPlayedBreaks(new Set(
+      result.breaks
+        .filter((slot) => slot.timestamp < boundedTime)
+        .map((slot) => slot.id),
+    ))
+    content.currentTime = boundedTime
+    setCurrentTime(boundedTime)
+    onTimeChange(boundedTime)
+    if (shouldResume) {
+      void content.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false))
+    }
+  }
+
+  useImperativeHandle(ref, () => ({ seekTo }))
 
   const triggerBreak = (slot: BreakSlot) => {
     const content = contentRef.current
@@ -144,4 +173,4 @@ export function AdPlayer({ result, onTimeChange }: AdPlayerProps) {
       </div>
     </div>
   )
-}
+})
