@@ -158,6 +158,7 @@ class ModelRuntime:
         self._vlm_model: Any = None
         self._vlm_processor: Any = None
         self._vlm_failed = False
+        self._vlm_successes = 0
         self._lock = threading.Lock()
         self.similarity = AdaptiveSimilarity(settings, self._note)
 
@@ -208,16 +209,26 @@ class ModelRuntime:
             return fallback
         try:
             self._ensure_vlm()
+        except Exception as error:
+            self._vlm_failed = True
+            self._note(
+                f"VLM unavailable: {type(error).__name__}; transcript fallback used"
+            )
+            return fallback
+
+        try:
             from PIL import Image
 
             image = Image.open(frame_path).convert("RGB")
             prompt = (
-                "Analyse this Bengali drama frame with its nearby transcript. "
-                "Return only compact JSON with keys dominant_activity, activities, "
-                "contexts, mood, description. Contexts must explicitly include "
-                "safety-sensitive concepts such as funeral, grief, medical emergency, "
-                "injury, violence, alcohol, children, cooking, eating, travel, "
-                "celebration when visible or stated. "
+                "Analyse this Bengali drama frame and transcript. Return one JSON "
+                "object only, without markdown or explanation. Use short lowercase "
+                "English values for these keys: dominant_activity (string), activities "
+                "(array), contexts (array), mood (string), description (string). "
+                "Include "
+                "any visible or stated safety context such as funeral, grief, medical "
+                "emergency, injury, violence, alcohol, or children. Do not copy these "
+                "instructions into the values. "
                 f"Transcript: {transcript[:1200]}"
             )
             messages = [
@@ -239,27 +250,51 @@ class ModelRuntime:
             generated = self._vlm_model.generate(
                 **inputs,
                 do_sample=False,
-                max_new_tokens=120,
+                max_new_tokens=180,
             )
             prompt_length = inputs["input_ids"].shape[1]
             text = self._vlm_processor.batch_decode(
                 generated[:, prompt_length:], skip_special_tokens=True
             )[0]
-            payload = self._extract_json(text)
+            try:
+                payload = self._extract_json(text)
+            except (json.JSONDecodeError, ValueError):
+                generated_context = _fallback_context(f"{transcript} {text}")
+                self._vlm_successes += 1
+                self._note("VLM free-text output normalized with safety lexicon")
+                return SceneContext(
+                    dominant_activity=generated_context.dominant_activity,
+                    activities=self._unique_terms(
+                        [*generated_context.activities, *fallback.activities]
+                    ),
+                    contexts=self._unique_terms(
+                        [*generated_context.contexts, *fallback.contexts]
+                    ),
+                    mood=generated_context.mood,
+                    description=text.strip()[:500] or fallback.description,
+                )
+            dominant_activity = str(payload["dominant_activity"]).strip().lower()
+            if dominant_activity in {"activity", "short phrase", "unknown"}:
+                dominant_activity = fallback.dominant_activity
+            activities = self._unique_terms(
+                [*self._string_list(payload.get("activities")), *fallback.activities]
+            )
+            contexts = self._unique_terms(
+                [*self._string_list(payload.get("contexts")), *fallback.contexts]
+            )
+            description = str(payload.get("description", "")).strip()
+            if len(description) < 8 or description.casefold() == "sentence":
+                description = fallback.description
+            self._vlm_successes += 1
             return SceneContext(
-                dominant_activity=str(payload["dominant_activity"]).strip().lower(),
-                activities=self._string_list(payload.get("activities")),
-                contexts=self._string_list(payload.get("contexts")),
+                dominant_activity=dominant_activity,
+                activities=activities,
+                contexts=contexts,
                 mood=str(payload.get("mood", fallback.mood)).strip().lower(),
-                description=str(
-                    payload.get("description", fallback.description)
-                ).strip()[:500],
+                description=description[:500],
             )
         except Exception as error:
-            self._vlm_failed = True
-            self._note(
-                f"VLM unavailable: {type(error).__name__}; transcript fallback used"
-            )
+            self._note(f"VLM output rejected: {type(error).__name__}; fallback used")
             return fallback
 
     def _ensure_vlm(self) -> None:
@@ -277,7 +312,7 @@ class ModelRuntime:
             )
             self._vlm_model = AutoModelForImageTextToText.from_pretrained(
                 self.settings.vlm_model_id,
-                torch_dtype=torch.float32,
+                dtype=torch.float32,
                 low_cpu_mem_usage=True,
             ).to("cpu")
             self._vlm_model.eval()
@@ -299,6 +334,10 @@ class ModelRuntime:
             return []
         return [str(item).strip().lower() for item in value if str(item).strip()][:12]
 
+    @staticmethod
+    def _unique_terms(values: list[str]) -> list[str]:
+        return list(dict.fromkeys(value for value in values if value))[:12]
+
     def report(self, used_sidecar: bool = False) -> ModelReport:
         speech_name = (
             "timed subtitle track"
@@ -309,7 +348,7 @@ class ModelRuntime:
         )
         visual_name = (
             self.settings.vlm_model_id
-            if self._vlm_model is not None
+            if self._vlm_successes > 0
             else "FFmpeg + transcript fallback"
         )
         degraded = bool(self.notes)
