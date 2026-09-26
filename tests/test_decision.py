@@ -119,6 +119,14 @@ def test_all_negative_context_matches_return_no_ad() -> None:
     assert match_brand(emergency, aftermath, brands) is None
 
 
+def test_weak_context_does_not_force_an_unrelated_ad() -> None:
+    before = make_scene("s1", "police interview", ["station"])
+    after = make_scene("s2", "investigation", ["corridor"], 60, 120)
+    food = make_brand("meal-brand", "food", "cooking", ["funeral"])
+
+    assert match_brand(before, after, [food], LexicalSimilarity()) is None
+
+
 def test_unseen_ninth_brand_can_win_from_catalogue_data_only() -> None:
     before = make_scene("s1", "reading", ["home"])
     after = make_scene("s2", "stargazing", ["night sky"], 60, 120)
