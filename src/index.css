@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;600;700&display=swap');
+
+:root {
+  font-family: 'Manrope', 'Noto Sans Bengali', sans-serif;
+  color: #f5f5f5;
+  background: #0e0e0f;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --red: #e11d2e;
+  --red-bright: #f02b3c;
+  --ink: #0e0e0f;
+  --surface: #141416;
+  --line: #2b2b2f;
+  --line-soft: #222226;
+  --text: #f5f5f5;
+  --muted: #929298;
+  --green: #42c986;
+  --amber: #f0b44d;
+  letter-spacing: 0;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  min-width: 320px;
+  background: var(--ink);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px), var(--ink);
+  background-size: 100% 56px;
+}
+
+button, input { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 2px;
+}
+
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+::selection { color: white; background: var(--red); }
