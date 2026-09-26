@@ -107,7 +107,7 @@ sequenceDiagram
 
 FFmpeg computes frame-level scene-change metadata with a configurable threshold. Cuts within 2.5 seconds are merged by retaining the strongest change. This prevents flashes and rapid edits from creating unusably short scenes.
 
-Each interval between retained cuts becomes a scene. A midpoint frame and overlapping transcript text are passed to the tiny VLM. The model returns normalized English labels for dominant activity, supporting activities, context, mood, and description. If the VLM is unavailable, bilingual transcript terms provide conservative labels.
+Each interval between retained cuts becomes a scene. A midpoint frame and overlapping transcript text are passed to the tiny VLM. The model returns normalized English labels for dominant activity, supporting activities, context, mood, and description. If the VLM is unavailable, a validated timed scene-context sidecar is used when supplied; otherwise bilingual transcript terms provide conservative labels.
 
 Visual cuts remain the segmentation anchor. Model-generated text never invents a timestamp.
 
@@ -115,7 +115,7 @@ Visual cuts remain the segmentation anchor. Model-generated text never invents a
 
 For a visual boundary at time `t`, Movie Ad AI records:
 
-- `V`: FFmpeg scene-change strength in `[0, 1]`
+- `V`: FFmpeg scene-change strength normalized so twice the configured detection threshold is a full-strength cut
 - `S`: local silence duration normalized at 1.2 seconds
 - `D`: semantic difference between adjacent scenes
 - `E`: distance from programme edges, normalized to the required margin
