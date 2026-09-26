@@ -206,17 +206,29 @@ class ModelRuntime:
             self._note(f"ASR unavailable: {type(error).__name__}; silence gating used")
             return []
 
-    def describe_scene(self, frame_path: Path | None, transcript: str) -> SceneContext:
-        fallback = _fallback_context(transcript)
+    def describe_scene(
+        self,
+        frame_path: Path | None,
+        transcript: str,
+        fallback_context: SceneContext | None = None,
+    ) -> SceneContext:
+        fallback = fallback_context or _fallback_context(transcript)
         if not self.settings.enable_vlm or frame_path is None or self._vlm_failed:
-            self._note("VLM disabled; transcript context fallback used")
+            fallback_source = (
+                "timed scene context" if fallback_context else "transcript context"
+            )
+            self._note(f"VLM disabled; {fallback_source} fallback used")
             return fallback
         try:
             self._ensure_vlm()
         except Exception as error:
             self._vlm_failed = True
+            fallback_source = (
+                "timed scene context" if fallback_context else "transcript"
+            )
             self._note(
-                f"VLM unavailable: {type(error).__name__}; transcript fallback used"
+                f"VLM unavailable: {type(error).__name__}; "
+                f"{fallback_source} fallback used"
             )
             return fallback
 
@@ -342,7 +354,11 @@ class ModelRuntime:
     def _unique_terms(values: list[str]) -> list[str]:
         return list(dict.fromkeys(value for value in values if value))[:12]
 
-    def report(self, used_sidecar: bool = False) -> ModelReport:
+    def report(
+        self,
+        used_sidecar: bool = False,
+        used_scene_context: bool = False,
+    ) -> ModelReport:
         speech_name = (
             "timed subtitle track"
             if used_sidecar
@@ -353,6 +369,8 @@ class ModelRuntime:
         visual_name = (
             self.settings.vlm_model_id
             if self._vlm_successes > 0
+            else "FFmpeg + timed scene context"
+            if used_scene_context
             else "FFmpeg + transcript fallback"
         )
         degraded = bool(self.notes)
