@@ -13,10 +13,12 @@ from backend.media import (
     detect_scene_cuts,
     detect_silences,
     extract_frame,
+    load_timed_scene_contexts,
+    normalise_scene_change,
     probe_duration,
     silence_near,
 )
-from backend.model_runtime import ModelRuntime
+from backend.model_runtime import ModelRuntime, SceneContext
 from backend.schemas import (
     AnalysisResult,
     AnalysisSummary,
@@ -96,6 +98,7 @@ class VideoAnalysisPipeline:
         used_sidecar = source_path.with_suffix(".srt").is_file() and bool(
             speech_segments
         )
+        used_scene_context = source_path.with_suffix(".scenes.json").is_file()
 
         update("Building semantic scenes", 0.40)
         scenes = self._build_scenes(
@@ -112,6 +115,9 @@ class VideoAnalysisPipeline:
         brand_matches = {}
         for index, cut in enumerate(cuts):
             scene_before, scene_after = _scene_for_timestamp(scenes, cut.timestamp)
+            visual_change = normalise_scene_change(
+                cut.score, self.settings.scene_threshold
+            )
             semantic_similarity = self.models.similarity.similarity(
                 f"{scene_before.dominant_activity} {scene_before.description}",
                 f"{scene_after.dominant_activity} {scene_after.description}",
@@ -119,7 +125,7 @@ class VideoAnalysisPipeline:
             candidate = score_boundary(
                 BoundaryObservation(
                     timestamp=cut.timestamp,
-                    visual_change=cut.score,
+                    visual_change=visual_change,
                     silence_seconds=silence_near(cut.timestamp, silences),
                     semantic_shift=clamp(1 - semantic_similarity),
                 ),
@@ -214,7 +220,7 @@ class VideoAnalysisPipeline:
                 ad_load_percent=round(ad_load_percent, 3),
             ),
             policy=policy,
-            models=self.models.report(used_sidecar),
+            models=self.models.report(used_sidecar, used_scene_context),
             scenes=scenes,
             candidates=candidates,
             breaks=breaks,
@@ -243,12 +249,32 @@ class VideoAnalysisPipeline:
         progress: ProgressCallback,
     ) -> list[Scene]:
         boundaries = [0.0, *[cut.timestamp for cut in cuts], duration]
+        timed_contexts = load_timed_scene_contexts(source_path)
         scenes: list[Scene] = []
         for index, (start, end) in enumerate(
             zip(boundaries, boundaries[1:], strict=False)
         ):
             midpoint = start + (end - start) / 2
             transcript = _transcript_for_scene(speech_segments, start, end)
+            timed_context = next(
+                (
+                    context
+                    for context in timed_contexts
+                    if context.start <= midpoint < context.end
+                ),
+                None,
+            )
+            fallback_context = (
+                SceneContext(
+                    dominant_activity=timed_context.dominant_activity,
+                    activities=timed_context.activities,
+                    contexts=timed_context.contexts,
+                    mood=timed_context.mood,
+                    description=timed_context.description,
+                )
+                if timed_context
+                else None
+            )
             frame_path: Path | None = None
             if index < self.settings.max_vlm_scenes and self.models.needs_visual_frame:
                 candidate_frame = frame_dir / f"scene-{index + 1:04}.jpg"
@@ -258,8 +284,16 @@ class VideoAnalysisPipeline:
                     )
                 except MediaProcessingError:
                     frame_path = None
-            context = self.models.describe_scene(frame_path, transcript)
-            start_visual_score = cuts[index - 1].score if index > 0 else 0.0
+            context = self.models.describe_scene(
+                frame_path, transcript, fallback_context
+            )
+            start_visual_score = (
+                normalise_scene_change(
+                    cuts[index - 1].score, self.settings.scene_threshold
+                )
+                if index > 0
+                else 0.0
+            )
             scenes.append(
                 Scene(
                     id=f"scene-{index + 1:04}",
