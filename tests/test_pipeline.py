@@ -25,8 +25,8 @@ def test_generated_demo_runs_end_to_end(tmp_path: Path) -> None:
     result = pipeline.analyse(
         job_id="integration-test",
         source_path=demo_path,
-        source_name="chhondo-demo.mp4",
-        media_url="/media/demo/chhondo-demo.mp4",
+        source_name="movie-ad-ai-demo.mp4",
+        media_url="/media/demo/movie-ad-ai-demo.mp4",
         brands=brands,
         policy=PacingPolicy(min_gap_seconds=30),
         job_dir=job_dir,
@@ -42,6 +42,7 @@ def test_generated_demo_runs_end_to_end(tmp_path: Path) -> None:
         for candidate in result.candidates
         if candidate.is_safe
     )
+    assert not (job_dir / "frames").exists()
     assert (job_dir / "debug.json").is_file()
 
     manifest_path = job_dir / "manifest.vmap"
