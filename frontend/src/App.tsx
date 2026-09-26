@@ -26,6 +26,7 @@ import {
   uploadVideo,
 } from './api'
 import { AdPlayer } from './components/AdPlayer'
+import type { AdPlayerHandle } from './components/AdPlayer'
 import { PipelineExplainer } from './components/PipelineExplainer'
 import type { AnalysisJob, Brand, PolicyInput } from './types'
 import './App.css'
@@ -54,9 +55,15 @@ function scoreLabel(score: number): string {
   return 'Acceptable'
 }
 
+function supportingReasons(decision: string, reasons: string[]): string {
+  return reasons.filter((reason) => !decision.endsWith(reason)).join(' · ')
+}
+
 function App() {
   const videoInput = useRef<HTMLInputElement>(null)
   const catalogueInput = useRef<HTMLInputElement>(null)
+  const player = useRef<AdPlayerHandle>(null)
+  const hasStartedDemo = useRef(false)
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null)
   const [selectedCatalogue, setSelectedCatalogue] = useState<File | null>(null)
   const [catalogue, setCatalogue] = useState<Brand[]>([])
@@ -73,6 +80,16 @@ function App() {
   useEffect(() => {
     void fetchHealth().then(setApiOnline)
     void fetchCatalogue().then(setCatalogue).catch(() => setCatalogue([]))
+
+    if (hasStartedDemo.current) return
+    hasStartedDemo.current = true
+    setIsSubmitting(true)
+    void startDemo(DEFAULT_POLICY)
+      .then(setJob)
+      .catch((requestError: unknown) => {
+        setError(requestError instanceof Error ? requestError.message : 'Unable to start demo')
+      })
+      .finally(() => setIsSubmitting(false))
   }, [])
 
   useEffect(() => {
@@ -149,6 +166,9 @@ function App() {
   const result = job?.result
   const isBusy = isSubmitting || job?.status === 'queued' || job?.status === 'running'
   const progress = job?.progress ?? 0
+  const seekTo = (time: number) => {
+    player.current?.seekTo(time)
+  }
 
   return (
     <div className="app-shell">
@@ -192,8 +212,8 @@ function App() {
 
             <button className="dropzone" type="button" onClick={() => videoInput.current?.click()} disabled={STATIC_MODE}>
               <Upload size={22} />
-              <strong>{STATIC_MODE ? 'Sample drama bundled' : selectedVideo?.name ?? 'Choose a video'}</strong>
-              <span>{STATIC_MODE ? 'Uploads available in Docker mode' : selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 400 MB'}</span>
+              <strong>{STATIC_MODE ? 'Upload limit reached (free tier)' : selectedVideo?.name ?? 'Choose a video'}</strong>
+              <span>{STATIC_MODE ? 'Sample drama loads automatically' : selectedVideo ? `${(selectedVideo.size / 1024 / 1024).toFixed(1)} MB` : 'MP4, MOV, MKV or WEBM · up to 400 MB'}</span>
             </button>
             <input
               ref={videoInput}
@@ -261,7 +281,7 @@ function App() {
           <div className="stage-panel">
             {result ? (
               <>
-                <AdPlayer key={result.job_id} result={result} onTimeChange={setPlayhead} />
+                <AdPlayer ref={player} key={result.job_id} result={result} onTimeChange={setPlayhead} />
                 <div className="story-timeline" aria-label="Scene and ad break timeline">
                   <div className="timeline-labels">
                     <span>STORY MAP</span>
@@ -269,11 +289,14 @@ function App() {
                   </div>
                   <div className="timeline-track">
                     {result.scenes.map((scene, index) => (
-                      <div
+                      <button
+                        type="button"
                         className={`scene-segment scene-${index % 4}`}
                         key={scene.id}
                         style={{ width: `${(scene.duration / result.duration_seconds) * 100}%` }}
                         title={`${formatTime(scene.start)} · ${scene.dominant_activity}`}
+                        aria-label={`Seek to ${formatTime(scene.start)}, ${scene.dominant_activity}`}
+                        onClick={() => seekTo(scene.start)}
                       />
                     ))}
                     {result.breaks.map((slot) => (
@@ -286,6 +309,17 @@ function App() {
                     ))}
                     <span className="playhead" style={{ left: `${(playhead / result.duration_seconds) * 100}%` }} />
                   </div>
+                  <input
+                    className="timeline-scrubber"
+                    type="range"
+                    min="0"
+                    max={result.duration_seconds}
+                    step="0.1"
+                    value={Math.min(playhead, result.duration_seconds)}
+                    onChange={(event) => seekTo(Number(event.target.value))}
+                    aria-label="Seek through video duration"
+                    style={{ '--progress': `${(playhead / result.duration_seconds) * 100}%` } as React.CSSProperties}
+                  />
                 </div>
                 <div className="metric-strip">
                   <div><Film size={17} /><span>Scenes<strong>{result.summary.scene_count}</strong></span></div>
@@ -355,7 +389,11 @@ function App() {
               ))}
 
               {result && activeTab === 'breaks' && result.breaks.length === 0 && (
-                <div className="waiting-copy"><ShieldCheck size={20} /><p>No boundary passed every safety and pacing rule. No ad was forced.</p></div>
+                <div className="waiting-copy"><ShieldCheck size={20} /><p>
+                  {result.summary.safe_candidate_count === 0
+                    ? 'No boundary cleared the safety threshold. No ad was forced.'
+                    : 'Safe boundaries were found, but no creative satisfied the matching and pacing rules.'}
+                </p></div>
               )}
 
               {result && activeTab === 'scenes' && result.scenes.map((scene) => (
@@ -373,7 +411,7 @@ function App() {
                   <section>
                     <strong>{formatTime(candidate.timestamp)} · {Math.round(candidate.interruptibility_score * 100)}</strong>
                     <span>{candidate.decision}</span>
-                    <p>{candidate.reasons.join(' · ')}</p>
+                    <p>{supportingReasons(candidate.decision, candidate.reasons)}</p>
                   </section>
                 </article>
               ))}
@@ -405,7 +443,42 @@ function App() {
         </section>
 
         <PipelineExplainer />
+
+        <section className="audit-ledger" aria-labelledby="audit-ledger-title">
+          <header>
+            <p className="eyebrow">OUTPUT / DECISION LEDGER</p>
+            <h2 id="audit-ledger-title">The evidence stays attached.</h2>
+          </header>
+          <div className="ledger-grid">
+            <article>
+              <span>PROGRAMME</span>
+              <strong>{result?.source_name ?? 'Awaiting analysis'}</strong>
+              <p>{result ? `${formatTime(result.duration_seconds)} · ${result.summary.scene_count} mapped scenes` : 'No media processed in this session'}</p>
+            </article>
+            <article>
+              <span>PLACEMENT</span>
+              <strong>{result ? `${result.summary.break_count} scheduled` : 'No schedule yet'}</strong>
+              <p>{result ? `${result.summary.safe_candidate_count} of ${result.summary.candidate_count} boundaries eligible` : 'Safety and pacing results appear here'}</p>
+            </article>
+            <article>
+              <span>CONTEXT</span>
+              <strong>{result?.breaks[0]?.brand.category ?? 'Catalogue ready'}</strong>
+              <p>{result?.breaks[0] ? `${result.breaks[0].brand.name} · ${Math.round(result.breaks[0].match_score * 100)}% match` : `${catalogue.length} validated brand profiles`}</p>
+            </article>
+            <article>
+              <span>DELIVERY</span>
+              <strong>VMAP 1.0 / VAST 4.2</strong>
+              <p>Portable schedule with a complete JSON decision trace</p>
+            </article>
+          </div>
+        </section>
       </main>
+
+      <footer className="site-footer">
+        <div className="footer-mark"><strong>MOVIE</strong><span>AD AI</span></div>
+        <p>Contextual ad intelligence for long-form stories.</p>
+        <span>Local evidence · Auditable decisions · 2026</span>
+      </footer>
     </div>
   )
 }
