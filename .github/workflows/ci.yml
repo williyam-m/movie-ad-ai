@@ -35,7 +35,7 @@ jobs:
           ENABLE_ASR: 'false'
           ENABLE_VLM: 'false'
           ENABLE_SEMANTIC_MODEL: 'false'
-        run: pytest
+        run: python -m pytest
 
       - uses: actions/setup-node@v4
         with:
