@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -67,6 +67,22 @@ class Scene(StrictModel):
     mood: str
     description: str
     transcript: str = ""
+
+
+class TimedSceneContext(StrictModel):
+    start: float = Field(ge=0)
+    end: float = Field(gt=0)
+    dominant_activity: str = Field(min_length=2, max_length=120)
+    activities: list[str] = Field(min_length=1, max_length=20)
+    contexts: list[str] = Field(min_length=1, max_length=20)
+    mood: str = Field(min_length=2, max_length=80)
+    description: str = Field(min_length=8, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_interval(self) -> Self:
+        if self.end <= self.start:
+            raise ValueError("scene context end must be after start")
+        return self
 
 
 class BoundaryObservation(StrictModel):
