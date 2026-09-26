@@ -52,7 +52,7 @@ def build_vmap(
         vast = ET.SubElement(vast_data, "VAST", {"version": "4.2"})
         ad = ET.SubElement(vast, "Ad", {"id": f"ad-{slot.id}", "adType": "audioVideo"})
         inline = ET.SubElement(ad, "InLine")
-        ET.SubElement(inline, "AdSystem", {"version": "1.0"}).text = "Chhondo"
+        ET.SubElement(inline, "AdSystem", {"version": "1.0"}).text = "Movie Ad AI"
         ET.SubElement(inline, "AdTitle").text = slot.brand.name
         ET.SubElement(inline, "Impression", {"id": "served"}).text = _absolute_url(
             f"/api/impressions/{job_id}/{slot.id}", base_url
