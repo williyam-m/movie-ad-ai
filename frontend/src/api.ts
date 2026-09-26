@@ -19,6 +19,15 @@ function dataUrl(type: string, content: string): string {
   return `data:${type};charset=utf-8,${encodeURIComponent(content)}`
 }
 
+function vmapDuration(seconds: number): string {
+  const milliseconds = Math.round(seconds * 1000)
+  const hours = Math.floor(milliseconds / 3_600_000)
+  const minutes = Math.floor((milliseconds % 3_600_000) / 60_000)
+  const remainder = Math.floor((milliseconds % 60_000) / 1000)
+  const fraction = milliseconds % 1000
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}.${String(fraction).padStart(3, '0')}`
+}
+
 export async function fetchCatalogue(): Promise<Brand[]> {
   if (STATIC_MODE) return catalogueData.brands
   const response = await fetch('/api/catalogue')
@@ -64,8 +73,10 @@ export async function startDemo(policy: PolicyInput): Promise<AnalysisJob> {
   }
 
   const origin = window.location.origin
-  const creativeUrl = `${origin}${result.breaks[0]?.creative_url ?? ''}`
-  const adBreak = result.breaks.length === 0 ? '' : `<vmap:AdBreak timeOffset="00:00:28.021" breakType="linear" breakId="break-01"><vmap:AdSource id="source-break-01" allowMultipleAds="false" followRedirects="true"><vmap:VASTAdData><VAST version="4.2"><Ad id="ad-break-01"><InLine><AdSystem version="1.0">Movie Ad AI</AdSystem><AdTitle>RannaBondhu</AdTitle><Impression>${origin}</Impression><Creatives><Creative><Linear><Duration>00:00:06.000</Duration><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="960" height="540">${creativeUrl}</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST></vmap:VASTAdData></vmap:AdSource></vmap:AdBreak>`
+  const firstBreak = result.breaks[0]
+  const adBreak = firstBreak
+    ? `<vmap:AdBreak timeOffset="${firstBreak.time_offset}" breakType="linear" breakId="${firstBreak.id}"><vmap:AdSource id="source-${firstBreak.id}" allowMultipleAds="false" followRedirects="true"><vmap:VASTAdData><VAST version="4.2"><Ad id="ad-${firstBreak.id}"><InLine><AdSystem version="1.0">Movie Ad AI</AdSystem><AdTitle>${firstBreak.brand.name}</AdTitle><Impression>${origin}</Impression><Creatives><Creative><Linear><Duration>${vmapDuration(firstBreak.duration)}</Duration><MediaFiles><MediaFile delivery="progressive" type="video/mp4" width="960" height="540">${new URL(firstBreak.creative_url, origin).href}</MediaFile></MediaFiles></Linear></Creative></Creatives></InLine></Ad></VAST></vmap:VASTAdData></vmap:AdSource></vmap:AdBreak>`
+    : ''
   const vmap = `<?xml version="1.0" encoding="UTF-8"?>\n<vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">${adBreak}</vmap:VMAP>`
   result.manifest_url = dataUrl('application/xml', vmap)
   result.debug_url = dataUrl('application/json', JSON.stringify(result, null, 2))
