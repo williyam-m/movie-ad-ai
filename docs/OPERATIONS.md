@@ -19,8 +19,8 @@ The frontend is compiled in a Node 22 build stage. The runtime image contains Py
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PUBLIC_BASE_URL` | `http://localhost:7860` | Absolute VMAP creative and impression origin |
-| `CHHONDO_DATA_DIR` | `<repo>/runtime` | Job, demo, creative, and model-writable root |
-| `MAX_UPLOAD_BYTES` | `2147483648` | Streaming upload limit |
+| `MOVIE_AD_AI_DATA_DIR` | `<repo>/runtime` | Job, demo, creative, and model-writable root |
+| `MAX_UPLOAD_BYTES` | `419430400` | Streaming upload limit (400 MiB) |
 | `ENABLE_ASR` | `true` | Enable faster-whisper Bengali timing |
 | `ASR_MODEL_ID` | `tiny` | CTranslate2 Whisper checkpoint |
 | `ENABLE_VLM` | `true` | Enable visual scene descriptions |
@@ -70,7 +70,7 @@ For a fast deterministic smoke test, temporarily set all three `ENABLE_*` variab
 ## Capacity and limits
 
 - One analysis runs at a time; additional requests remain queued in process.
-- A 2 GB upload limit protects disk, but practical hackathon inputs should be shorter and compressed to reduce queue time.
+- A 400 MiB upload limit protects disk; inputs should still be compressed to reduce queue time.
 - VLM inference is bounded to 36 scenes. Remaining scenes use transcript context.
 - Each completed job retains source and artefacts until the container restarts. Persistent production deployments need an explicit retention job.
 - The in-memory job table does not survive a process restart.
