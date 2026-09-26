@@ -99,6 +99,7 @@ def match_brand(
     brands: Sequence[Brand],
     similarity: SimilarityBackend | None = None,
     negative_threshold: float = 0.72,
+    minimum_score: float = 0.5,
 ) -> BrandMatch | None:
     """Rank arbitrary catalogue entries after hard-eliminating unsafe brands."""
 
@@ -153,6 +154,8 @@ def match_brand(
     score, brand, dominant_score, activity_score, context_score = max(
         ranked, key=lambda item: (item[0], item[2], item[1].id)
     )
+    if score < minimum_score:
+        return None
     reasons = [
         f"dominant activity '{dominant_activity}' match {dominant_score:.0%}",
         f"supporting activity match {activity_score:.0%}",
