@@ -3,11 +3,18 @@ from xml.etree import ElementTree as ET
 
 from backend.catalogue import load_catalogue
 from backend.config import Settings
+from backend.media import normalise_scene_change
 from backend.model_runtime import ModelRuntime
 from backend.pipeline import VideoAnalysisPipeline
 from backend.schemas import PacingPolicy
 from backend.vmap import VMAP_NAMESPACE
 from scripts.generate_demo_media import ensure_demo_media
+
+
+def test_scene_change_strength_is_calibrated_to_detection_threshold() -> None:
+    assert normalise_scene_change(0.18, 0.18) == 0.5
+    assert normalise_scene_change(0.36, 0.18) == 1.0
+    assert normalise_scene_change(0.72, 0.18) == 1.0
 
 
 def test_generated_demo_runs_end_to_end(tmp_path: Path) -> None:
