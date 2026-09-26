@@ -7,8 +7,10 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from pydantic import TypeAdapter, ValidationError
+
 from backend.config import Settings
-from backend.schemas import SpeechSegment
+from backend.schemas import SpeechSegment, TimedSceneContext
 
 DURATION_PATTERN = re.compile(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)")
 PTS_PATTERN = re.compile(r"pts_time[:=](\d+(?:\.\d+)?)")
@@ -19,6 +21,7 @@ SRT_TIME_PATTERN = re.compile(
     r"(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*"
     r"(\d{2}):(\d{2}):(\d{2})[,.](\d{3})"
 )
+SCENE_CONTEXT_LIST = TypeAdapter(list[TimedSceneContext])
 
 
 class MediaProcessingError(RuntimeError):
@@ -152,6 +155,11 @@ def merge_nearby_cuts(
     return merged
 
 
+def normalise_scene_change(score: float, detection_threshold: float) -> float:
+    strong_cut_score = max(detection_threshold * 2, 0.01)
+    return max(0.0, min(1.0, score / strong_cut_score))
+
+
 def detect_silences(
     path: Path, duration: float, settings: Settings
 ) -> list[SilenceInterval]:
@@ -256,3 +264,23 @@ def parse_sidecar_subtitles(video_path: Path) -> list[SpeechSegment]:
         if end > start:
             segments.append(SpeechSegment(start=start, end=end, text=text))
     return segments
+
+
+def load_timed_scene_contexts(video_path: Path) -> list[TimedSceneContext]:
+    context_path = video_path.with_suffix(".scenes.json")
+    if not context_path.is_file():
+        return []
+    try:
+        payload = json.loads(context_path.read_text(encoding="utf-8"))
+        contexts = sorted(
+            SCENE_CONTEXT_LIST.validate_python(payload),
+            key=lambda item: item.start,
+        )
+    except (OSError, json.JSONDecodeError, ValidationError) as error:
+        raise MediaProcessingError(f"Invalid scene context sidecar: {error}") from error
+    if any(
+        current.start < previous.end
+        for previous, current in zip(contexts, contexts[1:], strict=False)
+    ):
+        raise MediaProcessingError("Scene context sidecar intervals must not overlap")
+    return contexts
