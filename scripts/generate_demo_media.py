@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 import tempfile
@@ -9,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from backend.catalogue import load_catalogue
 from backend.config import Settings
 
 MEDIA_GENERATION_LOCK = threading.Lock()
@@ -261,21 +261,38 @@ def ensure_demo_media(settings: Settings | None = None) -> Path:
     if shutil.which(active_settings.ffmpeg_binary) is None:
         raise RuntimeError("ffmpeg is required to generate demo media")
 
-    demo_path = active_settings.demo_dir / "movie-ad-ai-demo.mp4"
+    supplied_demo_path = active_settings.demo_dir / "mohanagar.mp4"
+    demo_path = (
+        supplied_demo_path
+        if supplied_demo_path.is_file()
+        else active_settings.demo_dir / "movie-ad-ai-demo.mp4"
+    )
     with MEDIA_GENERATION_LOCK:
-        subtitle_path = demo_path.with_suffix(".srt")
-        if not demo_path.exists():
+        if demo_path != supplied_demo_path and not demo_path.exists():
             _generate_atomically(
                 demo_path,
                 lambda output_path: _build_demo_video(output_path, active_settings),
             )
-        _write_demo_subtitles(subtitle_path)
-
-        catalogue = json.loads(
-            (active_settings.root_dir / "data" / "brands.json").read_text(
-                encoding="utf-8"
+        if demo_path != supplied_demo_path:
+            _write_demo_subtitles(demo_path.with_suffix(".srt"))
+        else:
+            context_source = (
+                active_settings.root_dir / "data" / "demo" / "mohanagar.scenes.json"
             )
-        )["brands"]
+            if context_source.is_file():
+                shutil.copyfile(
+                    context_source, demo_path.with_suffix(".scenes.json")
+                )
+
+        supplied_catalogue_path = active_settings.demo_dir / "brands.json"
+        catalogue_path = (
+            supplied_catalogue_path
+            if demo_path == supplied_demo_path and supplied_catalogue_path.is_file()
+            else active_settings.root_dir / "data" / "brands.json"
+        )
+        catalogue = [
+            brand.model_dump() for brand in load_catalogue(catalogue_path)
+        ]
         for index, brand in enumerate(catalogue):
             output_path = active_settings.ads_dir / f"{brand['id']}.mp4"
             if not output_path.exists():
