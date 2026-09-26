@@ -1,11 +1,11 @@
-FROM node:22-bookworm-slim AS frontend
+FROM node:22-bookworm-slim AS frontend-build
 
-WORKDIR /app
-COPY package.json package-lock.json ./
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-COPY index.html tsconfig*.json vite.config.ts eslint.config.js ./
-COPY public ./public
-COPY src ./src
+COPY frontend/index.html frontend/tsconfig*.json frontend/vite.config.ts frontend/eslint.config.js ./
+COPY frontend/public ./public
+COPY frontend/src ./src
 RUN npm run build
 
 FROM python:3.11-slim-bookworm AS runtime
@@ -17,7 +17,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TOKENIZERS_PARALLELISM=false \
     OMP_NUM_THREADS=2 \
     MODEL_CPU_THREADS=2 \
-    CHHONDO_DATA_DIR=/data \
+    MOVIE_AD_AI_DATA_DIR=/data \
+    MAX_UPLOAD_BYTES=419430400 \
     HF_HOME=/data/hf-cache \
     ENABLE_ASR=true \
     ENABLE_VLM=true \
@@ -40,7 +41,7 @@ RUN useradd --create-home --uid 1000 user \
 COPY --chown=user:user backend ./backend
 COPY --chown=user:user scripts ./scripts
 COPY --chown=user:user data ./data
-COPY --from=frontend --chown=user:user /app/dist ./dist
+COPY --from=frontend-build --chown=user:user /app/frontend/dist ./frontend/dist
 
 USER user
 EXPOSE 7860
